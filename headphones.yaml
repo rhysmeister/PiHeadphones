@@ -1,0 +1,58 @@
+---
+  - hosts: all
+    gather_facts: yes
+    become: yes
+    remote_user: pi
+    vars:
+      headphones_git: https://github.com/rembo10/headphones.git
+
+    tasks:
+
+      - name: Clone Headphones repo
+        git:
+          repo: "{{ headphones_git }}"
+          dest: /home/pi/headphones
+          update: no
+        become: no
+
+      - name: Ensure Headphone web app listens on all interfaces
+        lineinfile:
+          path: /home/pi/headphones/config.ini
+          regexp: "{{ item['regexp'] }}"
+          line: "{{ item['line'] }}"
+        with_items:
+          - { regexp: '^http_host =', line: 'http_host = 0.0.0.0' }
+          - { regexp: '^customhost =', line: 'custom_host = 0.0.0.0' }
+
+      - pause:
+          prompt: Some manual headphones config needed. See the documentation and press enter when ready to continue
+
+      - name: Copy the config.ini out of the git project to default location
+        copy:
+          src: /home/pi/headphones/config.ini
+          dest: /opt/headphones/config.ini
+          remote_src: yes
+          mode: 0600
+
+      - name: Ensure init file has been copied from the git repo
+        copy:
+          src: /home/pi/headphones/init-scripts/init.ubuntu
+          dest: /etc/init.d/headphones
+          remote_src: yes
+          mode: 0755
+
+      - name: Ensure config for headphones init script is present
+        copy:
+          src: files/headphones
+          dest: /etc/default/headphones
+
+      - name: Ensure headphones service is added
+        shell: update-rc.d headphones defaults && touch headphones.success
+        args:
+          creates: headphones.success
+
+      - name: Ensure headphone service is set to autostart
+        service:
+          name: headphones
+          state: started
+          enabled: yes
