@@ -1,3 +1,4 @@
 HP_USER=pi
-HP_HOME=/home/pi/headphones
+HP_HOME=/opt/headphones
 HP_HOST=0.0.0.0
+HP_OPTS=" --config=/opt/headphones/config.ini"
